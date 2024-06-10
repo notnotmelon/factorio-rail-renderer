@@ -1,11 +1,15 @@
 from PIL import Image
+import pathlib
+import os
 
-file_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/hr-space-rail.png'
-output_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/crops/'
-hr_mask_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/hr-inner-mask.png'
-mask_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/inner-mask.png'
-hr_endcap_mask_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/hr-endcap-mask.png'
-endcap_mask_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/endcap-mask.png'
+script_location = pathlib.Path(__file__).parent
+
+output_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/'
+file_path = script_location / 'hr-space-rail.png'
+hr_mask_path = script_location / 'hr-inner-mask.png'
+mask_path = script_location / 'inner-mask.png'
+hr_endcap_mask_path = script_location / 'hr-endcap-mask.png'
+endcap_mask_path = script_location / 'endcap-mask.png'
 
 def subtract(original, subtractant, subtractant_position):
     subtractant_alpha = subtractant.copy()
