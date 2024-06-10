@@ -10,7 +10,7 @@ $vpt = [5, 0, 5];
 function rotate90(point) = [-point[1], point[0], point[2]];
 function rotate90arr(points) = [for (point = points) rotate90(point)];
 
-subdivisions = 4;
+subdivisions = 5;
 //fourth_control_points = [[0, 13, 0],[5,12, 0],[9,9, 0],[12,5, 0]];  // for factorio 2.0!
 fourth_control_points = [[0, 11, 0], [7.5, 7.5, 0]];   // for factorio 1.0!
 
@@ -19,6 +19,9 @@ path = smooth(control_points, subdivisions, loop = true);
 
 straight_control_points = [[0, 2, 0], [0, 1, 0], [0, -1, 0], [0, -2, 0]];
 straight_path = straight_control_points;
+
+diagonal_control_points = [[0, 2, 0], [0, -2, 0]];
+diagonal_path = diagonal_control_points;
 
 neck_width = 0.5;
 total_height = 0.75;
@@ -39,6 +42,10 @@ module rail_half(path, negate, straight) {
 }
 
 module rail(path, control_points, angle = -1, straight) {
+    color([1, 0, 0]) {
+        spline_wall(path, width=0.1, height=0.01, subdivisions=0, loop=!straight);
+    }
+
     translate([0, 0, -total_height]) {
 
     color([0.8, 0.9, 1]) {
@@ -76,9 +83,9 @@ scale([scale_factor, scale_factor, 0.15]) {
                 rail(straight_path, straight_control_points, 90, straight = true);
         translate([0, 4, 0])
             rotate([0, 0, -45])
-                rail(straight_path, straight_control_points, 90, straight = true);
+                rail(diagonal_path, diagonal_control_points, 90, straight = true);
         translate([0, -4, 0])
             rotate([0, 0, 45])
-                rail(straight_path, straight_control_points, 90, straight = true);
+                rail(diagonal_path, diagonal_control_points, 90, straight = true);
     }
 }
