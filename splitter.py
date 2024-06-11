@@ -5,7 +5,6 @@ import os
 script_location = pathlib.Path(__file__).parent
 
 output_path = 'C:/Users/zacha/Documents/factorio/mods/pystellarexpeditiongraphics/graphics/entity/space-rail/'
-file_path = script_location / 'hr-space-rail.png'
 
 hr_mask_path = script_location / 'hr-inner-mask.png'
 mask_path = script_location / 'inner-mask.png'
@@ -31,7 +30,7 @@ def mask_subtract(original, subtractant):
     white_square_alpha.putalpha(0)
     original.paste(white_square_alpha, (0, 0), mask=white_square)
 
-def main(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, horizontal_curve_mask):
+def split_layer(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, horizontal_curve_mask):
     width, height = img.size
     quadrant_width = width // 2
     quadrant_height = height // 2
@@ -201,6 +200,14 @@ def main(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, horizontal
     add_to_right(bottom_left_center, bottom_left_center_2).save(output_path + prefix + 'diagonal-rail-bottom-left.png')
     add_to_right(bottom_right_center, bottom_right_center_2).save(output_path + prefix + 'diagonal-rail-bottom-right.png')
 
-with Image.open(file_path) as img:
-    main('hr-', img, 1, Image.open(hr_mask_path).convert('RGBA'), Image.open(hr_endcap_mask_path).convert('RGBA'), Image.open(hr_vertical_curve_mask_path).convert('RGBA'), Image.open(hr_horizontal_curve_mask_path).convert('RGBA'))
-    main('', img.resize((img.width // 2, img.height // 2)), 2, Image.open(mask_path).convert('RGBA'), Image.open(endcap_mask_path).convert('RGBA'), Image.open(vertical_curve_mask_path).convert('RGBA'), Image.open(horizontal_curve_mask_path).convert('RGBA'))
+def main(prefix):
+    file_path = script_location / ('hr-space-rail-' + prefix + '.png')
+    os.makedirs(output_path + prefix, exist_ok=True)
+    with Image.open(file_path) as img:
+        split_layer(prefix + '/hr-', img, 1, Image.open(hr_mask_path).convert('RGBA'), Image.open(hr_endcap_mask_path).convert('RGBA'), Image.open(hr_vertical_curve_mask_path).convert('RGBA'), Image.open(hr_horizontal_curve_mask_path).convert('RGBA'))
+        split_layer(prefix + '/', img.resize((img.width // 2, img.height // 2)), 2, Image.open(mask_path).convert('RGBA'), Image.open(endcap_mask_path).convert('RGBA'), Image.open(vertical_curve_mask_path).convert('RGBA'), Image.open(horizontal_curve_mask_path).convert('RGBA'))
+
+main('backplates')
+main('shadow')
+main('ties')
+main('stone-path')
