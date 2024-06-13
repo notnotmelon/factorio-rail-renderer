@@ -1,7 +1,7 @@
-cd $PSScriptRoot
+Set-Location $PSScriptRoot
 
 foreach ($folder in (Get-ChildItem *.scad)) {
-    if ($folder.Name -ne 'generator.scad') {
+    if ($folder.Name -ne 'spline.scad') {
         Write-Host $folder.Name
         $output = "$($folder.BaseName).stl"
         $command = "openscad -o $output --export-format binstl $folder"
