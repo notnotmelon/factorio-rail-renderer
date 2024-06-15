@@ -1,59 +1,80 @@
+factorio_version = "1.1"; // 1.1 or 2.0
+
 use <spline.scad>
 use <C:/Users/zacha/Documents/boltsos_0.4.1/BOLTS.scad>
+
+// layer indexes
+RED_WIRE = 0;
+GREEN_WIRE = 1;
+COPPER_WIRE = 2;
+STONE_PATH = 3;
+BACKPLATES = 4;
+TIES = 5;
+METALS = 6;
+
+function rotate90(point) = [-point[1], point[0], point[2]];
+function rotate90arr(points) = [for (point = points) rotate90(point)];
+function rotate360arr(points) = concat(points, rotate90arr(rotate90arr(rotate90arr(points))), rotate90arr(rotate90arr(points)), rotate90arr(points));
+
+seven_and_a_bit = 7.51;
+
+subdivisions = 5;
+tie_subdivisions = 3;
 
 function rotate90(point) = [-point[1], point[0], point[2]];
 function rotate90arr(points) = [for (point = points) rotate90(point)];
 
-subdivisions = 5;
-//fourth_control_points = [[0, 13, 0],[5,12, 0],[9,9, 0],[12,5, 0]];  // for factorio 2.0!
-fourth_control_points = [[0, 11, 0], [7.5, 7.5, 0]];   // for factorio 1.0!
+fourth_control_points = factorio_version == "1.1" ? [[0, 11, 0], [7.5, 7.5, 0]] : [[0, 13, 0],[5,12, 0],[9,9, 0],[12,5, 0]];   // for factorio 1.0!
 
 control_points = concat(fourth_control_points, rotate90arr(rotate90arr(rotate90arr(fourth_control_points))), rotate90arr(rotate90arr(fourth_control_points)), rotate90arr(fourth_control_points));
 path = smooth(control_points, subdivisions, loop = true);
 
-straight_control_points = [[0, 2, 0], [0, -2, 0]];
+straight_control_points = [[0, 2*64/56, 0], [0, -2*64/56, 0]];
 straight_path = straight_control_points;
 
-neck_inner_width = 0.5;
-neck_outer_width = 1;
-total_height = 0.5;
-neck_height = 0.2;
-base_width = 2;
-top_width = 1.5;
+neck_inner_width = 0.5*1.2;
+neck_outer_width = 1*1.2;
+total_height = 0.3;
+top_width = 1.5*1.2;
+tie_radius = 0.1;
+wire_diameter = 0.025;
 
-function base_point_outer(negate) = [negate*base_width/2, 0, 0];
-function base_point_inner(negate) = [negate*neck_inner_width/2, 0, 0];
 function top_point_inner(negate) = [negate*neck_inner_width/2, total_height, 0];
 function top_point_outer(negate) = [negate*top_width/2, total_height, 0];
-function neck_point_inner(negate) = [negate*neck_inner_width/2, neck_height, 0];
-function neck_point_outer(negate) = [negate*neck_outer_width/2, neck_height, 0];
+function neck_point_inner(negate) = [negate*neck_inner_width/2, 0, 0];
+function neck_point_outer(negate) = [negate*neck_outer_width/2, 0, 0];
 
 function full_rail_polygon(negate) = rotate90arr([
-    base_point_outer(negate),
-    base_point_inner(negate),
-    top_point_inner(negate),
-    top_point_outer(negate),
-    neck_point_outer(negate)
-]);
-
-function stone_path_polygon(negate) = rotate90arr([
-    base_point_outer(negate),
-    base_point_inner(negate),
-    neck_point_inner(negate),
-    neck_point_outer(negate)
-]);
-
-function backplates_polygon(negate) = rotate90arr([
     neck_point_inner(negate),
     neck_point_outer(negate),
     top_point_outer(negate),
     top_point_inner(negate)
 ]);
 
-function pick_polygon(negate, metals, backplates, ties, stone_path) = 
-    backplates && stone_path ? full_rail_polygon(negate) :
-    backplates ? backplates_polygon(negate) :
-    stone_path ? stone_path_polygon(negate) :
+function stone_path_polygon(negate) = rotate90arr([
+    neck_point_inner(negate),
+    neck_point_outer(negate),
+    top_point_outer(negate),
+    top_point_inner(negate)    
+]);
+
+function backplates_polygon(negate) = rotate90arr([
+    neck_point_inner(negate),
+    neck_point_outer(negate),
+    [negate*neck_inner_width/2, 0.01, 0]
+]);
+
+function points_offset(points, offset) = [for (point = points) [point[0] + offset[0], point[1] + offset[1], point[2] + offset[2]]];
+wire_distance = 0.035;
+wire_offset = -0.24;
+function red_wire_polygon() = points_offset(circle_points(wire_diameter, 36), [wire_distance, wire_offset, 0]);
+function green_wire_polygon() = points_offset(circle_points(wire_diameter, 36), [0, wire_offset, 0]);
+function copper_wire_polygon() = points_offset(circle_points(wire_diameter, 36), [-wire_distance, wire_offset, 0]);
+
+function pick_polygon(layers, negate) = 
+    layers[BACKPLATES] && layers[STONE_PATH] ? full_rail_polygon(negate) :
+    layers[BACKPLATES] ? backplates_polygon(negate) :
+    layers[STONE_PATH] ? stone_path_polygon(negate) :
     undef;
 
 module rail_half(path, polygon, straight) {
@@ -61,7 +82,7 @@ module rail_half(path, polygon, straight) {
         noodle(path, polygon, loop = !straight);
 }
 
-module backplates_connections_helper(point1, point2, angle) {
+module crosses_helper(point1, point2, angle) {
     // Calculate the rotation angle
     angle1 = angle == -1 ? atan2(point1[0], point1[1]) : angle;
     angle2 = angle == -1 ? atan2(point2[0], point2[1]) : angle;
@@ -98,101 +119,111 @@ module backplates_connections_helper(point1, point2, angle) {
     }
 }
 
-module backplates_connections(tie_points, angle, straight) {
+module crosses(tie_points, angle, straight) {
     for (i = [1 : len(tie_points)-1]) {
         point = tie_points[i];
         previous_point = tie_points[i-1];
-        backplates_connections_helper(point, previous_point, angle);
+        crosses_helper(point, previous_point, angle);
     }
 
     if (!straight) {
-        backplates_connections_helper(tie_points[len(tie_points)-1], tie_points[0], angle);
+        crosses_helper(tie_points[len(tie_points)-1], tie_points[0], angle);
     }
 }
 
 module ties(tie_points, angle) {
-    translate([0, 0, 0.25]) {
-        for (point = tie_points)
-            translate(point) {
-                // Calculate the rotation angle
-                angle = angle == -1 ? atan2(point[0], point[1]) : angle;
-                rotate([angle + 90, 90, 0]) {
-                    cylinder(h = 0.8, r = neck_height / 2, center = true);
-                }
-            }
-    }
-}
-
-module wire_claspers(tie_points, angle) {
     for (point = tie_points)
         translate(point) {
             // Calculate the rotation angle
             angle = angle == -1 ? atan2(point[0], point[1]) : angle;
             rotate([angle + 90, 90, 0]) {
-                translate([1, 0, 0])
-                cylinder(h = 0.2, r = 0.05, center = true);
+                cylinder(h = 0.8, r = tie_radius, center = true);
             }
         }
 }
 
-module rail(path, control_points, metals, backplates, ties, stone_path, angle, straight = true) {
-    translate([0, 0, -total_height]) {
-        color([0.8, 0.9, 1]) {
-            rail_half(path, pick_polygon(1, metals, backplates, ties, stone_path), straight);
-            rail_half(path, pick_polygon(-1, metals, backplates, ties, stone_path), straight);
+module rail(layers, path, control_points, angle, straight = true) {
+    color([0.8, 0.9, 1]) {
+        rail_half(path, pick_polygon(layers, 1), straight);
+        rail_half(path, pick_polygon(layers, -1), straight);
+    }
+
+    tie_control_points = smooth(control_points, straight ? tie_subdivisions - 1 : tie_subdivisions, loop = !straight);
+    // remove the first, last, and center points if straight==true
+    tie_points = straight ? [for (i = [1 : len(tie_control_points)-2]) if (i != floor(len(tie_control_points)/2)) tie_control_points[i]] : tie_control_points;
+
+    difference() {
+        union() {
+            if (layers[TIES]) color([0.5, 0.5, 0.5]) ties(tie_points, angle);
+            if (layers[STONE_PATH]) color([0.8, 0.9, 1]) crosses(tie_control_points, angle, straight);
+            /*translate([0, 0, total_height / 2]) {
+                if (layers[GREEN_WIRE]) color([0, 1, 0]) noodle(path, green_wire_polygon(), loop = !straight);
+                if (layers[RED_WIRE]) color([1, 0, 0]) noodle(path, red_wire_polygon(), loop = !straight);
+                if (layers[COPPER_WIRE]) color([1, 0.5, 0]) noodle(path, copper_wire_polygon(), loop = !straight);
+            }*/
         }
-
-        tie_control_points = smooth(control_points, 3, loop = !straight);
-        tie_points = straight ? [for (i = [1 : len(tie_control_points)-2]) tie_control_points[i]] : tie_control_points; // remove the first and last points
-
-        difference() {
-            union() {
-                if (ties) color([0.5, 0.5, 0.5]) ties(tie_points, angle);
-                if (backplates) color([0.8, 0.9, 1]) backplates_connections(tie_points, angle, straight);
-                //if (stone_path) color([0.6, 0.2, 0.7]) wire_claspers(tie_points, angle);
+        color([0.5, 0.5, 0.5]) if (straight) {
+            // remove anything beyond the limits of the first and last points in the path
+            translate(path[0]) {
+                rotate([0, 0, angle])
+                    translate([0.5/2, 0, 0])
+                        cube([0.501, 1, 1], center = true);
             }
-            color([0.5, 0.5, 0.5]) if (straight) {
-                // remove anything beyond the limits of the first and last points in the path
-                translate(path[0]) {
-                    rotate([0, 0, angle])
-                        translate([0.5/2, 0, 0])
-                            cube([0.501, 1, 1], center = true);
-                }
-                translate(path[len(path)-1]) {
-                    rotate([0, 0, angle])
-                        translate([-0.5/2, 0, 0])
-                            cube([0.501, 1, 1], center = true);
-                }
+            translate(path[len(path)-1]) {
+                rotate([0, 0, angle])
+                    translate([-0.5/2, 0, 0])
+                        cube([0.501, 1, 1], center = true);
             }
         }
     }
 }
 
-module draw_rail(metals, backplates, ties, stone_path) {
+module draw_rail(red_wire = false, green_wire = false, copper_wire = false, stone_path = false, backplates = false, ties = false, metals = false) {
+    $fa = 3;
+    $fs = 0.01;
+    $vpr = [45, 0, 90];
+    $vpt = [5, 0, 5];
+
+    layers = [
+        red_wire,
+        green_wire,
+        copper_wire,
+        stone_path,
+        backplates,
+        ties,
+        metals
+    ];
+
     scale_factor = 0.325;
-    scale([scale_factor, scale_factor, 0.2]) {
+    scale([scale_factor, scale_factor, -0.2]) {
         foreshortening_factor = 1/sqrt(2);
         scale([1, foreshortening_factor, 1]) {
-            rail(path, control_points, metals, backplates, ties, stone_path, -1, straight = false);
+            rail(layers, path, control_points, -1, straight = false);
             translate([-4, 0, 0])
                 rotate([0, 0, 0])
-                    rail(straight_path, straight_control_points, metals, backplates, ties, stone_path, 90, straight = true);
+                    rail(layers, straight_path, straight_control_points, 90, straight = true);
             translate([4, 0, 0])
                 rotate([0, 0, 90])
-                    rail(straight_path, straight_control_points, metals, backplates, ties, stone_path, 90, straight = true);
+                    rail(layers, straight_path, straight_control_points, 90, straight = true);
             translate([0, 4, 0])
                 rotate([0, 0, -45])
-                    rail(straight_path, straight_control_points, metals, backplates, ties, stone_path, 90, straight = true);
+                    rail(layers, straight_path, straight_control_points, 90, straight = true);
             translate([0, -4, 0])
                 rotate([0, 0, 45])
-                    rail(straight_path, straight_control_points, metals, backplates, ties, stone_path, 90, straight = true);
+                    rail(layers, straight_path, straight_control_points, 90, straight = true);
         }
     }
 }
 
-$fa = 3;
-$fs = 0.01;
 $vpr = [45, 0, 90];
 $vpt = [5, 0, 5];
 
-draw_rail(metals = true, backplates = true, ties = true, stone_path = true);
+draw_rail(
+    red_wire = true,
+    green_wire = true,
+    copper_wire = true,
+    stone_path = true,
+    backplates = true,
+    ties = true,
+    metals = true
+);

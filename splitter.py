@@ -134,30 +134,33 @@ def split_layer(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, hor
     endcaps = Image.new('RGBA', (2048 // factor, 256 // factor), (0, 0, 0, 0))
 
     def add_endcap(x, y, shift_vector=(0, 0)):
+        shift_vector = (shift_vector[0] // factor, shift_vector[1] // factor)
+
         endcap = Image.new('RGBA', (2048 // factor, 256 // factor), (0, 0, 0, 0))
         endcap.paste(img.crop((x // factor, y // factor, (x + 256) // factor, (y + 256) // factor)), (endcap_offset[0], 0))
         mask_subtract(endcap, endcap_mask)
         endcap = endcap.crop((endcap_offset[0], 0, endcap_offset[0] + 256 // factor, 256 // factor))
         
-        endcaps.paste(endcap, (endcap_offset[0] + shift_vector[0] // factor, shift_vector[1] // factor))
+        endcaps.paste(endcap, (endcap_offset[0] + shift_vector[0], shift_vector[1]), endcap)
         endcap_offset[0] += 256 // factor
 
     def flip_x(x):
         return width * factor - (x + 256)
 
+    diagonal_inset = 8-45.2548339959
     vertical_endcaps_x = 736 # 1, 5
-    horizontal_endcaps_y = 492-12 # 3, 7
-    horizontal_endcaps_x = 880 # 3, 7
-    diagonal_endcaps_outer_y = 685-18 # 2, 8
-    diagonal_endcaps_outer_x = 549-18+18 # 2, 8
-    diagonal_endcaps_inner_y = 808 # 4, 6
-    diagonal_endcaps_inner_x = 1045+18 # 4, 6
+    horizontal_endcaps_y = 480 # 3, 7
+    horizontal_endcaps_x = 880-15 # 3, 7
+    diagonal_endcaps_outer_y = 667-diagonal_inset-8 # 2, 8
+    diagonal_endcaps_outer_x = 549+diagonal_inset+8 # 2, 8
+    diagonal_endcaps_inner_y = 808+diagonal_inset # 4, 6
+    diagonal_endcaps_inner_x = 1063+diagonal_inset # 4, 6
 
-    add_endcap(vertical_endcaps_x, 861, (0, -64))
+    add_endcap(vertical_endcaps_x, 861+3, (0, -64))
     add_endcap(diagonal_endcaps_outer_x, diagonal_endcaps_outer_y)
     add_endcap(horizontal_endcaps_x, horizontal_endcaps_y, (64, 0))
     add_endcap(diagonal_endcaps_inner_x, diagonal_endcaps_inner_y)
-    add_endcap(vertical_endcaps_x, 1153+32, (0, 64))
+    add_endcap(vertical_endcaps_x, 1153-32+9, (0, 64))
     add_endcap(flip_x(diagonal_endcaps_inner_x), diagonal_endcaps_inner_y)
     add_endcap(flip_x(horizontal_endcaps_x), horizontal_endcaps_y, (-64, 0))
     add_endcap(flip_x(diagonal_endcaps_outer_x), diagonal_endcaps_outer_y)
