@@ -151,8 +151,8 @@ def split_layer(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, hor
     vertical_endcaps_x = 736 # 1, 5
     horizontal_endcaps_y = 480 # 3, 7
     horizontal_endcaps_x = 880-15 # 3, 7
-    diagonal_endcaps_outer_y = 667-diagonal_inset+8 # 2, 8
-    diagonal_endcaps_outer_x = 549+diagonal_inset-8 # 2, 8
+    diagonal_endcaps_outer_y = 667-diagonal_inset+3 # 2, 8
+    diagonal_endcaps_outer_x = 549+diagonal_inset-3 # 2, 8
     diagonal_endcaps_inner_y = 808+diagonal_inset # 4, 6
     diagonal_endcaps_inner_x = 1063+diagonal_inset # 4, 6
 
@@ -160,7 +160,7 @@ def split_layer(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, hor
     add_endcap(diagonal_endcaps_outer_x, diagonal_endcaps_outer_y)
     add_endcap(horizontal_endcaps_x, horizontal_endcaps_y, (64, 0))
     add_endcap(diagonal_endcaps_inner_x, diagonal_endcaps_inner_y)
-    add_endcap(vertical_endcaps_x, 1153-32+9, (0, 64))
+    add_endcap(vertical_endcaps_x, 1153-32+2, (0, 64))
     add_endcap(flip_x(diagonal_endcaps_inner_x), diagonal_endcaps_inner_y)
     add_endcap(flip_x(horizontal_endcaps_x), horizontal_endcaps_y, (-64, 0))
     add_endcap(flip_x(diagonal_endcaps_outer_x), diagonal_endcaps_outer_y)
@@ -204,7 +204,7 @@ def split_layer(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, hor
     add_to_right(bottom_right_center, bottom_right_center_2).save(output_path + prefix + 'diagonal-rail-bottom-right.png')
 
 def main(prefix):
-    file_path = script_location / ('hr-space-rail-' + prefix + '.png')
+    file_path = script_location / 'blender-outputs' / ('hr-space-rail-' + prefix + '.png')
     os.makedirs(output_path + prefix, exist_ok=True)
     with Image.open(file_path) as img:
         split_layer(prefix + '/hr-', img, 1, Image.open(hr_mask_path).convert('RGBA'), Image.open(hr_endcap_mask_path).convert('RGBA'), Image.open(hr_vertical_curve_mask_path).convert('RGBA'), Image.open(hr_horizontal_curve_mask_path).convert('RGBA'))

@@ -1,7 +1,6 @@
 factorio_version = "1.1"; // 1.1 or 2.0
 
 use <spline.scad>
-use <C:/Users/zacha/Documents/boltsos_0.4.1/BOLTS.scad>
 
 // layer indexes
 RED_WIRE = 0;
