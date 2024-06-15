@@ -151,8 +151,8 @@ def split_layer(prefix, img, factor, mask, endcap_mask, vertical_curve_mask, hor
     vertical_endcaps_x = 736 # 1, 5
     horizontal_endcaps_y = 480 # 3, 7
     horizontal_endcaps_x = 880-15 # 3, 7
-    diagonal_endcaps_outer_y = 667-diagonal_inset-8 # 2, 8
-    diagonal_endcaps_outer_x = 549+diagonal_inset+8 # 2, 8
+    diagonal_endcaps_outer_y = 667-diagonal_inset+8 # 2, 8
+    diagonal_endcaps_outer_x = 549+diagonal_inset-8 # 2, 8
     diagonal_endcaps_inner_y = 808+diagonal_inset # 4, 6
     diagonal_endcaps_inner_x = 1063+diagonal_inset # 4, 6
 
