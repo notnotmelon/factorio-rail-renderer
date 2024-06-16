@@ -212,5 +212,5 @@ def main(prefix):
 
 main('backplates')
 main('shadow')
-main('ties')
 main('stone-path')
+main('wires')

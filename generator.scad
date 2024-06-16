@@ -10,6 +10,8 @@ STONE_PATH = 3;
 BACKPLATES = 4;
 TIES = 5;
 METALS = 6;
+ITEM_ICON = 7;
+WIRE_CLASPERS = 8;
 
 function rotate90(point) = [-point[1], point[0], point[2]];
 function rotate90arr(points) = [for (point = points) rotate90(point)];
@@ -31,12 +33,15 @@ path = smooth(control_points, subdivisions, loop = true);
 straight_control_points = [[0, 2*64/56, 0], [0, -2*64/56, 0]];
 straight_path = straight_control_points;
 
+item_icon_control_points = [[0, 64/56, 0], [0, -64/56, 0]];
+item_icon_path = item_icon_control_points;
+
 neck_inner_width = 0.5*1.2;
 neck_outer_width = 1*1.2;
 total_height = 0.3;
 top_width = 1.5*1.2;
 tie_radius = 0.1;
-wire_diameter = 0.025;
+crosses_width = 0.1;
 
 function top_point_inner(negate) = [negate*neck_inner_width/2, total_height, 0];
 function top_point_outer(negate) = [negate*top_width/2, total_height, 0];
@@ -64,11 +69,13 @@ function backplates_polygon(negate) = rotate90arr([
 ]);
 
 function points_offset(points, offset) = [for (point = points) [point[0] + offset[0], point[1] + offset[1], point[2] + offset[2]]];
-wire_distance = 0.035;
-wire_offset = -0.24;
-function red_wire_polygon() = points_offset(circle_points(wire_diameter, 36), [wire_distance, wire_offset, 0]);
-function green_wire_polygon() = points_offset(circle_points(wire_diameter, 36), [0, wire_offset, 0]);
-function copper_wire_polygon() = points_offset(circle_points(wire_diameter, 36), [-wire_distance, wire_offset, 0]);
+wire_distance = 0.022;
+wire_offset = 0.8;
+wire_height = -0.2;
+wire_diameter = 0.015;
+function red_wire_polygon(negate) = points_offset(circle_points(wire_diameter, 16), [wire_height - wire_distance, negate*(wire_offset + wire_distance), 0]);
+function green_wire_polygon(negate) = points_offset(circle_points(wire_diameter, 16), [wire_height, negate*(wire_offset), 0]);
+function copper_wire_polygon(negate) = points_offset(circle_points(wire_diameter, 16), [wire_height + wire_distance, negate*(wire_offset - wire_distance), 0]);
 
 function pick_polygon(layers, negate) = 
     layers[BACKPLATES] && layers[STONE_PATH] ? full_rail_polygon(negate) :
@@ -111,10 +118,9 @@ module crosses_helper(point1, point2, angle) {
         0
     ];
 
-    udon_width = 0.1;
-    translate([0, 0, total_height - udon_width/2]) {
-        udon([start1, end1], width = udon_width);
-        udon([start2, end2], width = udon_width);
+    translate([0, 0, total_height - crosses_width/2]) {
+        udon([start1, end1], width = crosses_width);
+        udon([start2, end2], width = crosses_width);
     }
 }
 
@@ -141,6 +147,19 @@ module ties(tie_points, angle) {
         }
 }
 
+module wire_claspers(negate, wire_points, angle, straight) {
+    for (point = wire_points) {
+        translate(point) {
+            // Calculate the rotation angle
+            angle = angle == -1 ? atan2(point[0], point[1]) : angle;
+            rotate([angle + 90, 90, 0])
+                translate([wire_height, 0, -negate*wire_offset])
+                    rotate([0, negate*45, 0])
+                        cylinder(h = 0.2, r = 0.02, center = true);
+        }
+    }
+}
+
 module rail(layers, path, control_points, angle, straight = true) {
     color([0.8, 0.9, 1]) {
         rail_half(path, pick_polygon(layers, 1), straight);
@@ -155,11 +174,12 @@ module rail(layers, path, control_points, angle, straight = true) {
         union() {
             if (layers[TIES]) color([0.5, 0.5, 0.5]) ties(tie_points, angle);
             if (layers[STONE_PATH]) color([0.8, 0.9, 1]) crosses(tie_control_points, angle, straight);
-            /*translate([0, 0, total_height / 2]) {
-                if (layers[GREEN_WIRE]) color([0, 1, 0]) noodle(path, green_wire_polygon(), loop = !straight);
-                if (layers[RED_WIRE]) color([1, 0, 0]) noodle(path, red_wire_polygon(), loop = !straight);
-                if (layers[COPPER_WIRE]) color([1, 0.5, 0]) noodle(path, copper_wire_polygon(), loop = !straight);
-            }*/
+            if (layers[GREEN_WIRE]) color([0, 1, 0]) noodle(path, green_wire_polygon(1), loop = !straight);
+            if (layers[RED_WIRE]) color([1, 0, 0]) noodle(path, red_wire_polygon(1), loop = !straight);
+            if (layers[COPPER_WIRE]) color([1, 0.5, 0]) noodle(path, copper_wire_polygon(1), loop = !straight);
+            if (layers[GREEN_WIRE]) color([0, 1, 0]) noodle(path, green_wire_polygon(-1), loop = !straight);
+            if (layers[RED_WIRE]) color([1, 0, 0]) noodle(path, red_wire_polygon(-1), loop = !straight);
+            if (layers[COPPER_WIRE]) color([1, 0.5, 0]) noodle(path, copper_wire_polygon(-1), loop = !straight);
         }
         color([0.5, 0.5, 0.5]) if (straight) {
             // remove anything beyond the limits of the first and last points in the path
@@ -175,41 +195,64 @@ module rail(layers, path, control_points, angle, straight = true) {
             }
         }
     }
+
+    if (layers[WIRE_CLASPERS]) {
+        wire_control_points = smooth(tie_control_points, 1, loop = !straight);
+        wire_points = straight ? [for (i = [0 : len(wire_control_points)-1]) if (i % 2 == 0) wire_control_points[i]] : wire_control_points;
+        color("black") wire_claspers(1, wire_points, angle, straight);
+        color("black") wire_claspers(-1, wire_points, angle, straight);
+    }
 }
 
-module draw_rail(red_wire = false, green_wire = false, copper_wire = false, stone_path = false, backplates = false, ties = false, metals = false) {
+module draw_rail(red_wire = false, green_wire = false, copper_wire = false, stone_path = false, backplates = false, ties = false, metals = false, item_icon = false, wire_claspers = false) {
     $fa = 3;
     $fs = 0.01;
     $vpr = [45, 0, 90];
     $vpt = [5, 0, 5];
 
-    layers = [
+    layers = item_icon ? [
+        true,
+        true,
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+    ] : [
         red_wire,
         green_wire,
         copper_wire,
         stone_path,
         backplates,
         ties,
-        metals
+        metals,
+        item_icon,
+        wire_claspers
     ];
 
     scale_factor = 0.325;
     scale([scale_factor, scale_factor, -0.2]) {
         foreshortening_factor = 1/sqrt(2);
         scale([1, foreshortening_factor, 1]) {
-            rail(layers, path, control_points, -1, straight = false);
-            translate([-4, 0, 0])
-                rotate([0, 0, 0])
-                    rail(layers, straight_path, straight_control_points, 90, straight = true);
-            translate([4, 0, 0])
-                rotate([0, 0, 90])
-                    rail(layers, straight_path, straight_control_points, 90, straight = true);
-            translate([0, 4, 0])
-                rotate([0, 0, -45])
-                    rail(layers, straight_path, straight_control_points, 90, straight = true);
-            translate([0, -4, 0])
-                rotate([0, 0, 45])
-                    rail(layers, straight_path, straight_control_points, 90, straight = true);
+            if (layers[ITEM_ICON]) {
+                rail(layers, item_icon_path, item_icon_control_points, 90, straight = true);
+            } else {
+                rail(layers, path, control_points, -1, straight = false);
+                translate([-4, 0, 0])
+                    rotate([0, 0, 180])
+                        rail(layers, straight_path, straight_control_points, 90, straight = true);
+                translate([4, 0, 0])
+                    rotate([0, 0, 90])
+                        rail(layers, straight_path, straight_control_points, 90, straight = true);
+                translate([0, 4, 0])
+                    rotate([0, 0, -45+180])
+                        rail(layers, straight_path, straight_control_points, 90, straight = true);
+                translate([0, -4, 0])
+                    rotate([0, 0, 45])
+                        rail(layers, straight_path, straight_control_points, 90, straight = true);
+            }
         }
     }
 }
@@ -223,6 +266,8 @@ draw_rail(
     copper_wire = true,
     stone_path = true,
     backplates = true,
-    ties = true,
-    metals = true
+    ties = false,
+    metals = true,
+    item_icon = false,
+    wire_claspers = true
 );
